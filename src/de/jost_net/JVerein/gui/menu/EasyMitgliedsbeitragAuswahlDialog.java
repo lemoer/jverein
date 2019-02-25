@@ -1,6 +1,5 @@
 package de.jost_net.JVerein.gui.menu;
 
-import com.mckoi.util.IntegerListInterface;
 import de.jost_net.JVerein.Einstellungen;
 import de.jost_net.JVerein.gui.control.MitgliedControl;
 import de.jost_net.JVerein.server.MitgliedUtils;
@@ -8,9 +7,8 @@ import de.willuhn.datasource.rmi.DBIterator;
 import de.willuhn.jameica.gui.input.CheckboxInput;
 import de.willuhn.jameica.gui.input.Input;
 import de.willuhn.jameica.gui.input.SelectInput;
-import de.willuhn.jameica.gui.util.ColumnLayout;
+import de.willuhn.jameica.gui.util.*;
 import de.willuhn.jameica.hbci.gui.parts.SparQuote;
-import org.apache.commons.lang.ObjectUtils;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -30,15 +28,10 @@ import de.willuhn.jameica.gui.dialogs.AbstractDialog;
 import de.willuhn.jameica.gui.input.TextInput;
 import de.willuhn.jameica.gui.parts.ButtonArea;
 import de.willuhn.jameica.gui.parts.TablePart;
-import de.willuhn.jameica.gui.util.Container;
-import de.willuhn.jameica.gui.util.SimpleContainer;
-import de.willuhn.jameica.gui.util.TabGroup;
 import org.relique.jdbc.csv.SqlParser;
 
 import java.rmi.RemoteException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.*;
 
 import static org.eclipse.swt.layout.GridData.*;
 
@@ -71,11 +64,75 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     control = new MitgliedskontoControl(null);
   }
 
+  class Beitragsmonat implements Comparable<Beitragsmonat> {
+
+    private final int jahr;
+
+    private final int monat;
+
+    private final boolean bezahlt;
+
+    Beitragsmonat(int jahr, int monat, boolean bezahlt) {
+      this.jahr = jahr;
+      this.monat = monat;
+      this.bezahlt = bezahlt;
+      assert jahr > 1900;
+      assert monat >= 0;
+      assert monat < 12;
+    }
+
+    Beitragsmonat(int jahr, int monat) {
+      this(jahr, monat, false);
+    }
+
+    public int getJahr()
+    {
+      return jahr;
+    }
+
+    public int getMonat()
+    {
+      return monat;
+    }
+
+    public boolean isBezahlt()
+    {
+      return bezahlt;
+    }
+
+    public int getFastRepr()
+    {
+      return getMonat() + 100 * getJahr();
+    }
+
+    @Override public int compareTo(Beitragsmonat o)
+    {
+      if (getFastRepr() > o.getFastRepr())
+      {
+        return 1;
+      }
+      else if (getFastRepr() == o.getFastRepr()) {
+        return 0;
+      }
+      else {
+        return -1;
+      }
+    }
+
+    @Override public boolean equals(Object o)
+    {
+      if (!(o instanceof Beitragsmonat))
+        return false;
+
+
+      return getFastRepr() == ((Beitragsmonat) o).getFastRepr();
+    }
+
+  }
+
   @Override
   protected void paint(Composite parent) throws Exception
   {
-
-
 
     TabFolder folder = new TabFolder(parent, SWT.NONE);
     folder.setLayoutData(new GridData(FILL_HORIZONTAL));
@@ -129,48 +186,83 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 //      Mitglied zahlmitglied = (Mitglied) Einstellungen.getDBService()
 //          .createObject(Mitglied.class, suche);
 
-      Composite allYears = new Composite(tabNurIst.getComposite(), FILL_BOTH);
+      final Composite allYears = new Composite(tabNurIst.getComposite(), FILL_BOTH);
 
-      SelectInput zahler = new SelectInput(zhl, null);
+      final SelectInput zahler = new SelectInput(zhl, null);
       zahler.setAttribute("namevorname");
       zahler.setPleaseChoose("Bitte auswählen");
-      zahler.addListener(event -> {
-        if (event != null && event.type == SWT.Selection)
+      zahler.addListener(new Listener()
+      {
+        @Override public void handleEvent(Event event)
         {
-          Mitglied sel = (Mitglied) zahler.getValue();
-
-          try
+          if (event != null && event.type == SWT.Selection)
           {
-            Date von = sel.getEintritt();
-            Date bis = sel.getAustritt();
+            Mitglied sel = (Mitglied) zahler.getValue();
 
-            if (von != null)
+            try
             {
-              GregorianCalendar calVon = new GregorianCalendar();
-              calVon.setTime(von);
+              Date von = sel.getEintritt();
+              Date bis = sel.getAustritt();
 
-              int vonYear = calVon.get(Calendar.YEAR);
-              int vonMonth = calVon.get(Calendar.MONTH);
+              if (von != null)
+              {
+                GregorianCalendar calVon = new GregorianCalendar();
+                calVon.setTime(von);
+
+                int vonYear = calVon.get(Calendar.YEAR);
+                int vonMonth = calVon.get(Calendar.MONTH);
+              }
+              if (bis != null)
+              {
+                GregorianCalendar calBis = new GregorianCalendar();
+                calBis.setTime(bis);
+
+                int bisYear = calBis.get(Calendar.YEAR);
+                int bisMonth = calBis.get(Calendar.MONTH);
+              }
+
+              SWTUtil.disposeChildren(allYears);
+
+              //GridLayout allYearsLayout = new GridLayout(13, false);
+              //allYears.setLayout(allYearsLayout);
+
+
+              ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
+              beitragsmonate.add(new Beitragsmonat(2017,1));
+              beitragsmonate.add(new Beitragsmonat(2017,2));
+              beitragsmonate.add(new Beitragsmonat(2017,3));
+              beitragsmonate.add(new Beitragsmonat(2017,4));
+              beitragsmonate.add(new Beitragsmonat(2019,1));
+              beitragsmonate.add(new Beitragsmonat(2017,5));
+              beitragsmonate.add(new Beitragsmonat(2017,6));
+              beitragsmonate.add(new Beitragsmonat(2017,7));
+              beitragsmonate.add(new Beitragsmonat(2017,8));
+              beitragsmonate.add(new Beitragsmonat(2017,9));
+              beitragsmonate.add(new Beitragsmonat(2017,10));
+              beitragsmonate.add(new Beitragsmonat(2017,11));
+              beitragsmonate.add(new Beitragsmonat(2018,1));
+              beitragsmonate.add(new Beitragsmonat(2018,2));
+              beitragsmonate.add(new Beitragsmonat(2018,3));
+              beitragsmonate.add(new Beitragsmonat(2018,4));
+              beitragsmonate.add(new Beitragsmonat(2018,5));
+
+
+              GridLayout allYearsLayout = new GridLayout(13, false);
+              allYears.setLayout(allYearsLayout);
+
+              updateBeitragsGrid(allYears, beitragsmonate);
+
+              allYears.layout();
+
             }
-            if (bis != null)
+            catch (RemoteException e)
             {
-              GregorianCalendar calBis = new GregorianCalendar();
-              calBis.setTime(bis);
 
-              int bisYear = calBis.get(Calendar.YEAR);
-              int bisMonth = calBis.get(Calendar.MONTH);
+              // TODO: is this a good idea?
+              e.printStackTrace();
             }
-
 
           }
-          catch (RemoteException e)
-          {
-
-            // TODO: is this a good idea?
-            e.printStackTrace();
-          }
-
-
         }
       });
       zahler.paint(tabNurIst.getComposite());
@@ -181,30 +273,26 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       GridLayout allYearsLayout = new GridLayout(13, false);
       allYears.setLayout(allYearsLayout);
 
-      newLbl(allYears, " ");
-      newLbl(allYears, "J");
-      newLbl(allYears, "F");
-      newLbl(allYears, "M");
-      newLbl(allYears, "A");
-      newLbl(allYears, "M");
-      newLbl(allYears, "J");
-      newLbl(allYears, "J");
-      newLbl(allYears, "A");
-      newLbl(allYears, "S");
-      newLbl(allYears, "O");
-      newLbl(allYears, "N");
-      newLbl(allYears, "D");
+      ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
+      beitragsmonate.add(new Beitragsmonat(2017,1, true));
+      beitragsmonate.add(new Beitragsmonat(2017,2, true));
+      beitragsmonate.add(new Beitragsmonat(2017,3));
+      beitragsmonate.add(new Beitragsmonat(2017,4));
+      beitragsmonate.add(new Beitragsmonat(2019,1));
+      beitragsmonate.add(new Beitragsmonat(2017,5));
+      beitragsmonate.add(new Beitragsmonat(2017,6));
+      beitragsmonate.add(new Beitragsmonat(2017,7));
+      beitragsmonate.add(new Beitragsmonat(2017,8));
+      beitragsmonate.add(new Beitragsmonat(2017,9));
+      beitragsmonate.add(new Beitragsmonat(2017,10));
+      beitragsmonate.add(new Beitragsmonat(2017,11));
+      beitragsmonate.add(new Beitragsmonat(2018,1));
+      beitragsmonate.add(new Beitragsmonat(2018,2));
+      beitragsmonate.add(new Beitragsmonat(2018,3));
+      beitragsmonate.add(new Beitragsmonat(2018,4));
+      beitragsmonate.add(new Beitragsmonat(2018,5));
 
-      for (int i = 2015; i < 2019; i++)
-      {
-        newLbl(allYears, Integer.toString(i));
-
-        for (int j = 0; j < 12; j++)
-        {
-          Button b = new Button(allYears, SWT.CHECK);
-          b.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
-        }
-      }
+      updateBeitragsGrid(allYears, beitragsmonate);
     }
 
     //
@@ -287,6 +375,55 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         }
       }, null, false, "stop-circle.png");
       b.paint(parent);
+    }
+  }
+
+  private void updateBeitragsGrid(Composite allYears, ArrayList<Beitragsmonat> l)
+  {
+    newLbl(allYears, " ");
+    newLbl(allYears, "J");
+    newLbl(allYears, "F");
+    newLbl(allYears, "M");
+    newLbl(allYears, "A");
+    newLbl(allYears, "M");
+    newLbl(allYears, "J");
+    newLbl(allYears, "J");
+    newLbl(allYears, "A");
+    newLbl(allYears, "S");
+    newLbl(allYears, "O");
+    newLbl(allYears, "N");
+    newLbl(allYears, "D");
+
+    Beitragsmonat min = Collections.min(l);
+    Beitragsmonat max = Collections.max(l);
+
+    for (int i = min.getJahr(); i <= max.getJahr(); i++)
+    {
+      newLbl(allYears, Integer.toString(i));
+
+      for (int j = 0; j < 12; j++)
+      {
+        Beitragsmonat iter = new Beitragsmonat(i, j);
+
+        if (!l.contains(iter))
+        {
+          // Mitglied ist noch nicht eingetreten.
+          newLbl(allYears, "x");
+          continue;
+        }
+        else
+        {
+          Beitragsmonat data = l.get(l.indexOf(iter));
+
+          Button b = new Button(allYears, SWT.CHECK);
+          if (data.isBezahlt())
+          {
+            b.setEnabled(false);
+            b.setSelection(true);
+          }
+          b.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
+        }
+      }
     }
   }
 
