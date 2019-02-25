@@ -59,6 +59,8 @@ public class BuchungMenu extends ContextMenu
         new BuchungBuchungsartZuordnungAction(control), "exchange-alt.png"));
     addItem(new CheckedContextMenuItem("Mitgliedskonto zuordnen",
         new BuchungMitgliedskontoZuordnungAction(control), "exchange-alt.png"));
+    addItem(new CheckedContextMenuItem("EasyMitgliedsbeitrag zuordnen",
+        new BuchungEasyMitgliedsbeitragZuordnungAction(control), "exchange-alt.png"));
     addItem(new CheckedContextMenuItem("Projekt zuordnen",
         new BuchungProjektZuordnungAction(control), "exchange-alt.png"));
     addItem(new CheckedContextMenuItem("Kontoauszug zuordnen",
