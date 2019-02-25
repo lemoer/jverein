@@ -2,6 +2,7 @@ package de.jost_net.JVerein.gui.menu;
 
 import de.jost_net.JVerein.Einstellungen;
 import de.jost_net.JVerein.gui.control.MitgliedControl;
+import de.jost_net.JVerein.rmi.EasyBeitragsmonat;
 import de.jost_net.JVerein.server.MitgliedUtils;
 import de.willuhn.datasource.rmi.DBIterator;
 import de.willuhn.jameica.gui.input.CheckboxInput;
@@ -72,10 +73,13 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
     private final boolean bezahlt;
 
+    private boolean selected;
+
     Beitragsmonat(int jahr, int monat, boolean bezahlt) {
       this.jahr = jahr;
       this.monat = monat;
       this.bezahlt = bezahlt;
+      this.selected = false;
       assert jahr > 1900;
       assert monat >= 0;
       assert monat < 12;
@@ -93,6 +97,16 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     public int getMonat()
     {
       return monat;
+    }
+
+    public boolean isSelected()
+    {
+      return this.selected;
+    }
+
+    public void setSelected(boolean selected)
+    {
+      this.selected = selected;
     }
 
     public boolean isBezahlt()
@@ -135,7 +149,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
   {
 
     TabFolder folder = new TabFolder(parent, SWT.NONE);
-    folder.setLayoutData(new GridData(FILL_HORIZONTAL));
+    folder.setLayoutData(new GridData(FILL_BOTH));
 
     {
 //      TabGroup tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
@@ -167,7 +181,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 //      mitgliedskontolist = control.getMitgliedskontoList(action, null);
 //      mitgliedskontolist.paint(tabNurIst.getComposite());
 
-      TabGroup tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
+      final TabGroup tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
 
       MitgliedControl mitgliedControl = new MitgliedControl(null);
 
@@ -204,21 +218,32 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
               Date von = sel.getEintritt();
               Date bis = sel.getAustritt();
 
+              GregorianCalendar calVon = new GregorianCalendar();
+              GregorianCalendar calBis = new GregorianCalendar();
+
               if (von != null)
               {
-                GregorianCalendar calVon = new GregorianCalendar();
                 calVon.setTime(von);
-
-                int vonYear = calVon.get(Calendar.YEAR);
-                int vonMonth = calVon.get(Calendar.MONTH);
+                calVon.set(Calendar.DAY_OF_MONTH, 1);
               }
+              else
+              {
+                // TODO: WAS NUN?
+              }
+
               if (bis != null)
               {
-                GregorianCalendar calBis = new GregorianCalendar();
                 calBis.setTime(bis);
+                calBis.setTime(von);
+                calBis.set(Calendar.DAY_OF_MONTH, 1);
+              }
+              else
+              {
+                // show checkboxes 1 year into future from now
+                calBis.setTime(new Date());
+                calBis.add(Calendar.YEAR, 1);
 
-                int bisYear = calBis.get(Calendar.YEAR);
-                int bisMonth = calBis.get(Calendar.MONTH);
+                calBis.set(Calendar.DAY_OF_MONTH, 1);
               }
 
               SWTUtil.disposeChildren(allYears);
@@ -226,26 +251,45 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
               //GridLayout allYearsLayout = new GridLayout(13, false);
               //allYears.setLayout(allYearsLayout);
 
+              Calendar it = (Calendar) calVon.clone();
+              Calendar end = calBis;
+
+              DBIterator<EasyBeitragsmonat> zhl = Einstellungen.getDBService()
+                  .createList(EasyBeitragsmonat.class);
+              zhl.addFilter("mitglied=?", sel.getID());
 
               ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
-              beitragsmonate.add(new Beitragsmonat(2017,1));
-              beitragsmonate.add(new Beitragsmonat(2017,2));
-              beitragsmonate.add(new Beitragsmonat(2017,3));
-              beitragsmonate.add(new Beitragsmonat(2017,4));
-              beitragsmonate.add(new Beitragsmonat(2019,1));
-              beitragsmonate.add(new Beitragsmonat(2017,5));
-              beitragsmonate.add(new Beitragsmonat(2017,6));
-              beitragsmonate.add(new Beitragsmonat(2017,7));
-              beitragsmonate.add(new Beitragsmonat(2017,8));
-              beitragsmonate.add(new Beitragsmonat(2017,9));
-              beitragsmonate.add(new Beitragsmonat(2017,10));
-              beitragsmonate.add(new Beitragsmonat(2017,11));
-              beitragsmonate.add(new Beitragsmonat(2018,1));
-              beitragsmonate.add(new Beitragsmonat(2018,2));
-              beitragsmonate.add(new Beitragsmonat(2018,3));
-              beitragsmonate.add(new Beitragsmonat(2018,4));
-              beitragsmonate.add(new Beitragsmonat(2018,5));
 
+              while (zhl.hasNext())
+              {
+                EasyBeitragsmonat next =  zhl.next();
+
+                int jahr = next.getJahr();
+                int monat = next.getMonat();
+
+                Buchung b1 = next.getBuchung();
+                Buchung b2 = EasyMitgliedsbeitragAuswahlDialog.this.buchung;
+                if (b1 == null || !b1.equals(b2))
+                {
+                  beitragsmonate.add(new Beitragsmonat(jahr, monat, true));
+                }
+                else
+                {
+                  Beitragsmonat e = new Beitragsmonat(jahr, monat);
+                  e.setSelected(true);
+                  beitragsmonate.add(e);
+                }
+              }
+
+              for (; it.before(end); it.add(Calendar.MONTH, 1)) {
+
+                int jahr = it.get(Calendar.YEAR);
+                int monat = it.get(Calendar.MONTH);
+
+                Beitragsmonat bm = new Beitragsmonat(jahr, monat);
+                if (!beitragsmonate.contains(bm))
+                  beitragsmonate.add(bm);
+              }
 
               GridLayout allYearsLayout = new GridLayout(13, false);
               allYears.setLayout(allYearsLayout);
@@ -253,6 +297,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
               updateBeitragsGrid(allYears, beitragsmonate);
 
               allYears.layout();
+              tabNurIst.getComposite().layout();
 
             }
             catch (RemoteException e)
@@ -419,6 +464,11 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
           if (data.isBezahlt())
           {
             b.setEnabled(false);
+            b.setSelection(true);
+          }
+          if (data.isSelected())
+          {
+            // TODO: will man die Zustände mergen?
             b.setSelection(true);
           }
           b.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
