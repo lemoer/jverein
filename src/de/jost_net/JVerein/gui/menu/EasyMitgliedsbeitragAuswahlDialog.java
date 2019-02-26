@@ -220,7 +220,22 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
       final Composite allYears = new Composite(tabNurIst.getComposite(), FILL_BOTH);
 
-      zahler = new SelectInput(zhl, null);
+      // (maybe) get preselected mitglied
+      Mitglied preselected = null;
+      {
+        DBIterator<EasyBeitragsmonat> preIter = Einstellungen.getDBService().createList(EasyBeitragsmonat.class);
+        preIter.addFilter("buchung=?", buchung.getID());
+
+        if (preIter.hasNext())
+        {
+          EasyBeitragsmonat next = preIter.next();
+          preselected = next.getMitglied();
+
+          selectAndLoadMitglied(preselected, allYears, tabNurIst);
+        }
+      }
+
+      zahler = new SelectInput(zhl, preselected);
       zahler.setAttribute("namevorname");
       zahler.setPleaseChoose("Bitte auswählen");
       zahler.addListener(new Listener()
@@ -231,100 +246,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
           {
             Mitglied sel = (Mitglied) zahler.getValue();
 
-            try
-            {
-              Date von = sel.getEintritt();
-              Date bis = sel.getAustritt();
-
-              GregorianCalendar calVon = new GregorianCalendar();
-              GregorianCalendar calBis = new GregorianCalendar();
-
-              if (von != null)
-              {
-                calVon.setTime(von);
-                calVon.set(Calendar.DAY_OF_MONTH, 1);
-              }
-              else
-              {
-                // TODO: WAS NUN?
-              }
-
-              if (bis != null)
-              {
-                calBis.setTime(bis);
-                calBis.setTime(von);
-                calBis.set(Calendar.DAY_OF_MONTH, 1);
-              }
-              else
-              {
-                // show checkboxes 1 year into future from now
-                calBis.setTime(new Date());
-                calBis.add(Calendar.YEAR, 1);
-
-                calBis.set(Calendar.DAY_OF_MONTH, 1);
-              }
-
-              SWTUtil.disposeChildren(allYears);
-
-              //GridLayout allYearsLayout = new GridLayout(13, false);
-              //allYears.setLayout(allYearsLayout);
-
-              Calendar it = (Calendar) calVon.clone();
-              Calendar end = calBis;
-
-              DBIterator<EasyBeitragsmonat> zhl = Einstellungen.getDBService()
-                  .createList(EasyBeitragsmonat.class);
-              zhl.addFilter("mitglied=?", sel.getID());
-
-              beitragsmonate.clear();
-
-              while (zhl.hasNext())
-              {
-                EasyBeitragsmonat next =  zhl.next();
-
-                int jahr = next.getJahr();
-                int monat = next.getMonat();
-
-                Buchung b1 = next.getBuchung();
-                Buchung b2 = EasyMitgliedsbeitragAuswahlDialog.this.buchung;
-                if (b1 == null || !b1.equals(b2))
-                {
-                  beitragsmonate.add(new Beitragsmonat(jahr, monat, true));
-                }
-                else
-                {
-                  Beitragsmonat e = new Beitragsmonat(jahr, monat);
-                  e.setSelected(true);
-                  beitragsmonate.add(e);
-                }
-              }
-
-              for (; it.before(end); it.add(Calendar.MONTH, 1)) {
-
-                int jahr = it.get(Calendar.YEAR);
-                int monat = it.get(Calendar.MONTH);
-
-                Beitragsmonat bm = new Beitragsmonat(jahr, monat);
-                if (!beitragsmonate.contains(bm))
-                  beitragsmonate.add(bm);
-              }
-
-              GridLayout allYearsLayout = new GridLayout(13, false);
-              allYears.setLayout(allYearsLayout);
-
-              updateBeitragsGrid(allYears, beitragsmonate);
-
-              allYears.layout();
-              tabNurIst.getComposite().layout();
-
-            }
-            catch (RemoteException e)
-            {
-
-              // TODO: is this a good idea?
-              e.printStackTrace();
-            }
-
+            selectAndLoadMitglied(sel, allYears, tabNurIst);
           }
         }
       });
@@ -333,29 +255,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       allYears.getHorizontalBar().setVisible(false);
       allYears.getVerticalBar().setVisible(false);
 
-      GridLayout allYearsLayout = new GridLayout(13, false);
-      allYears.setLayout(allYearsLayout);
-
-      beitragsmonate.clear();
-      beitragsmonate.add(new Beitragsmonat(2017,1, true));
-      beitragsmonate.add(new Beitragsmonat(2017,2, true));
-      beitragsmonate.add(new Beitragsmonat(2017,3));
-      beitragsmonate.add(new Beitragsmonat(2017,4));
-      beitragsmonate.add(new Beitragsmonat(2019,1));
-      beitragsmonate.add(new Beitragsmonat(2017,5));
-      beitragsmonate.add(new Beitragsmonat(2017,6));
-      beitragsmonate.add(new Beitragsmonat(2017,7));
-      beitragsmonate.add(new Beitragsmonat(2017,8));
-      beitragsmonate.add(new Beitragsmonat(2017,9));
-      beitragsmonate.add(new Beitragsmonat(2017,10));
-      beitragsmonate.add(new Beitragsmonat(2017,11));
-      beitragsmonate.add(new Beitragsmonat(2018,1));
-      beitragsmonate.add(new Beitragsmonat(2018,2));
-      beitragsmonate.add(new Beitragsmonat(2018,3));
-      beitragsmonate.add(new Beitragsmonat(2018,4));
-      beitragsmonate.add(new Beitragsmonat(2018,5));
-
-      updateBeitragsGrid(allYears, beitragsmonate);
     }
 
     //
@@ -489,6 +388,104 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     }, null, false, "stop-circle.png");
     b.paint(parent);
 
+  }
+
+  private void selectAndLoadMitglied(Mitglied sel, Composite allYears,
+      TabGroup tabNurIst)
+  {
+    try
+    {
+      Date von = sel.getEintritt();
+      Date bis = sel.getAustritt();
+
+      GregorianCalendar calVon = new GregorianCalendar();
+      GregorianCalendar calBis = new GregorianCalendar();
+
+      if (von != null)
+      {
+        calVon.setTime(von);
+        calVon.set(Calendar.DAY_OF_MONTH, 1);
+      }
+      else
+      {
+        // TODO: WAS NUN?
+      }
+
+      if (bis != null)
+      {
+        calBis.setTime(bis);
+        calBis.setTime(von);
+        calBis.set(Calendar.DAY_OF_MONTH, 1);
+      }
+      else
+      {
+        // show checkboxes 1 year into future from now
+        calBis.setTime(new Date());
+        calBis.add(Calendar.YEAR, 1);
+
+        calBis.set(Calendar.DAY_OF_MONTH, 1);
+      }
+
+      SWTUtil.disposeChildren(allYears);
+
+      //GridLayout allYearsLayout = new GridLayout(13, false);
+      //allYears.setLayout(allYearsLayout);
+
+      Calendar it = (Calendar) calVon.clone();
+      Calendar end = calBis;
+
+      DBIterator<EasyBeitragsmonat> zhl = Einstellungen.getDBService()
+          .createList(EasyBeitragsmonat.class);
+      zhl.addFilter("mitglied=?", sel.getID());
+
+      beitragsmonate.clear();
+
+      while (zhl.hasNext())
+      {
+        EasyBeitragsmonat next =  zhl.next();
+
+        int jahr = next.getJahr();
+        int monat = next.getMonat();
+
+        Buchung b1 = next.getBuchung();
+        Buchung b2 = EasyMitgliedsbeitragAuswahlDialog.this.buchung;
+        if (b1 == null || !b1.equals(b2))
+        {
+          beitragsmonate.add(new Beitragsmonat(jahr, monat, true));
+        }
+        else
+        {
+          Beitragsmonat e = new Beitragsmonat(jahr, monat);
+          e.setSelected(true);
+          beitragsmonate.add(e);
+        }
+      }
+
+      for (; it.before(end); it.add(Calendar.MONTH, 1)) {
+
+        int jahr = it.get(Calendar.YEAR);
+        int monat = it.get(Calendar.MONTH);
+
+        Beitragsmonat bm = new Beitragsmonat(jahr, monat);
+        if (!beitragsmonate.contains(bm))
+          beitragsmonate.add(bm);
+      }
+
+      GridLayout allYearsLayout = new GridLayout(13, false);
+      allYears.setLayout(allYearsLayout);
+
+      updateBeitragsGrid(allYears, beitragsmonate);
+
+      allYears.layout();
+      tabNurIst.getComposite().layout();
+
+    }
+    catch (RemoteException e)
+    {
+
+      // TODO: is this a good idea?
+      e.printStackTrace();
+    }
   }
 
   private void updateBeitragsGrid(Composite allYears, ArrayList<Beitragsmonat> l)
