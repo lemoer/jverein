@@ -37,7 +37,7 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
 
     try
     {
-      if (getMonat() > 11 || getMonat() < 0)
+      if (getMonat() > 11 || getMonat() < 0L)
         throw new ApplicationException("Monat des Beitragsmonat muss zwischen 0 und 11 liegen!");
 
       if (getMitglied() == null)
@@ -84,27 +84,12 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
 
   @Override public Mitglied getMitglied() throws RemoteException
   {
-    Object o = super.getAttribute("mitglied");
-    Long l = null;
-    if (o instanceof Long)
-    {
-      l = (Long) o;
-    }
-    if (o instanceof Integer)
-    {
-      l = new Long((Integer) o);
-    }
-    if (l == null)
-    {
-      return null; // Kein Mitglied zugeordnet
-    }
-    Cache cache = Cache.get(Mitglied.class, true);
-    return (Mitglied) cache.get(l);
+    return (Mitglied) getAttribute("mitglied");
   }
 
   @Override public void setMitglied(Mitglied m) throws RemoteException
   {
-    setAttribute("buchung", m.getID());
+    setAttribute("mitglied", m.getID());
   }
 
   @Override public int getJahr() throws RemoteException
@@ -117,7 +102,7 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
 
   @Override public void setJahr(int jahr) throws RemoteException
   {
-    setAttribute("jahr", jahr);
+    setAttribute("jahr", Long.valueOf(jahr));
   }
 
   @Override public int getMonat() throws RemoteException
@@ -130,6 +115,6 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
 
   @Override public void setMonat(int m) throws RemoteException
   {
-    setAttribute("monat", m);
+    setAttribute("monat", Long.valueOf(m));
   }
 }

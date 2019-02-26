@@ -3,14 +3,20 @@ package de.jost_net.JVerein.gui.menu;
 import de.jost_net.JVerein.Einstellungen;
 import de.jost_net.JVerein.gui.control.MitgliedControl;
 import de.jost_net.JVerein.rmi.EasyBeitragsmonat;
+import de.jost_net.JVerein.server.EasyBeitragsmonatImpl;
 import de.jost_net.JVerein.server.MitgliedUtils;
+import de.willuhn.datasource.db.AbstractDBObject;
 import de.willuhn.datasource.rmi.DBIterator;
+import de.willuhn.datasource.rmi.DBService;
+import de.willuhn.datasource.rmi.ResultSetExtractor;
 import de.willuhn.jameica.gui.input.CheckboxInput;
 import de.willuhn.jameica.gui.input.Input;
 import de.willuhn.jameica.gui.input.SelectInput;
 import de.willuhn.jameica.gui.util.*;
 import de.willuhn.jameica.hbci.gui.parts.SparQuote;
+import de.willuhn.jameica.hbci.server.UmsatzTypUtil;
 import de.willuhn.logging.Logger;
+import de.willuhn.util.ApplicationException;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
@@ -36,6 +42,8 @@ import org.relique.jdbc.csv.SqlParser;
 import sun.rmi.runtime.Log;
 
 import java.rmi.RemoteException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 
 import static org.eclipse.swt.layout.GridData.*;
@@ -58,6 +66,10 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
   private Buchung buchung;
 
   private ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
+
+  private AbstractDBObject transactionHolder;
+
+  private SelectInput zahler;
 
   public EasyMitgliedsbeitragAuswahlDialog(Buchung buchung)
   {
@@ -208,7 +220,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
       final Composite allYears = new Composite(tabNurIst.getComposite(), FILL_BOTH);
 
-      final SelectInput zahler = new SelectInput(zhl, null);
+      zahler = new SelectInput(zhl, null);
       zahler.setAttribute("namevorname");
       zahler.setPleaseChoose("Bitte auswählen");
       zahler.addListener(new Listener()
@@ -387,29 +399,72 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       {
         Logger.info("Handle Speichern");
 
-        for (int i = 0; i < beitragsmonate.size(); i++)
+        try
         {
-          Beitragsmonat beitragsmonat =  beitragsmonate.get(i);
+          DBTransactionStart();
 
-          String s = "Beitragsmonat: ";
-          s += Integer.toString(beitragsmonat.getJahr());
-          s += "-";
-          s += Integer.toString(beitragsmonat.getMonat());
-          s += " ";
+          // delete all old things
+          // TODO: does the deletion happen in the transaction?
+          DBIterator<EasyBeitragsmonat> zhl = Einstellungen.getDBService()
+              .createList(EasyBeitragsmonat.class);
+          zhl.addFilter("buchung=?", buchung.getID());
 
-          if (beitragsmonat.isSelected())
+          while (zhl.hasNext())
           {
-            s += "S";
-          }
-          else
-          {
-            s += "NS";
+            EasyBeitragsmonat next = zhl.next();
+            next.delete();
           }
 
-          Logger.info(s);
+          // insert new
 
+          for (int i = 0; i < beitragsmonate.size(); i++)
+          {
+            Beitragsmonat beitragsmonat = beitragsmonate.get(i);
+
+            if (!beitragsmonat.isSelected())
+              continue;
+
+            EasyBeitragsmonat bm = (EasyBeitragsmonat) Einstellungen.getDBService()
+                .createObject(EasyBeitragsmonat.class, null);
+            bm.setBuchung(buchung);
+            bm.setMitglied((Mitglied) zahler.getValue());
+            bm.setJahr(beitragsmonat.getJahr());
+            bm.setMonat(beitragsmonat.getMonat());
+            bm.store();
+
+          }
+
+          DBTransactionCommit();
         }
+        catch (RemoteException e)
+        {
+          e.printStackTrace();
+          try
+          {
+            DBTransactionRollback();
+          }
+          catch (RemoteException e2)
+          {
+            e2.printStackTrace();
+          }
+        }
+        catch (ApplicationException e)
+        {
+          // ApplicationException wird vom .store() geworfen
+          e.printStackTrace();
+          try
+          {
+            DBTransactionRollback();
+          }
+          catch (RemoteException e2)
+          {
+            e2.printStackTrace();
+          }
+        }
+
+        close();
       }
+
     }, null, false, "check.png");
 
     b.addButton("entfernen", new Action()
@@ -503,6 +558,27 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         }
       }
     }
+  }
+
+  private void DBTransactionStart() throws RemoteException
+  {
+    transactionHolder = (EasyBeitragsmonatImpl) Einstellungen.getDBService()
+        .createObject(EasyBeitragsmonat.class, null);
+    transactionHolder.transactionBegin();
+  }
+
+  private void DBTransactionCommit() throws RemoteException
+  {
+    if (null != transactionHolder)
+      transactionHolder.transactionCommit();
+    transactionHolder = null;
+  }
+
+  private void DBTransactionRollback() throws RemoteException
+  {
+    if (null != transactionHolder)
+      transactionHolder.transactionRollback();
+    transactionHolder = null;
   }
 
   private void newLbl(Composite allYears, String s)
