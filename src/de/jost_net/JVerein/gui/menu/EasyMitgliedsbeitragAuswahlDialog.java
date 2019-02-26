@@ -10,7 +10,10 @@ import de.willuhn.jameica.gui.input.Input;
 import de.willuhn.jameica.gui.input.SelectInput;
 import de.willuhn.jameica.gui.util.*;
 import de.willuhn.jameica.hbci.gui.parts.SparQuote;
+import de.willuhn.logging.Logger;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.layout.RowLayout;
@@ -30,6 +33,7 @@ import de.willuhn.jameica.gui.input.TextInput;
 import de.willuhn.jameica.gui.parts.ButtonArea;
 import de.willuhn.jameica.gui.parts.TablePart;
 import org.relique.jdbc.csv.SqlParser;
+import sun.rmi.runtime.Log;
 
 import java.rmi.RemoteException;
 import java.util.*;
@@ -52,6 +56,8 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
   private TablePart mitgliedlist = null;
 
   private Buchung buchung;
+
+  private ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
 
   public EasyMitgliedsbeitragAuswahlDialog(Buchung buchung)
   {
@@ -258,7 +264,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
                   .createList(EasyBeitragsmonat.class);
               zhl.addFilter("mitglied=?", sel.getID());
 
-              ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
+              beitragsmonate.clear();
 
               while (zhl.hasNext())
               {
@@ -318,7 +324,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       GridLayout allYearsLayout = new GridLayout(13, false);
       allYears.setLayout(allYearsLayout);
 
-      ArrayList<Beitragsmonat> beitragsmonate = new ArrayList<Beitragsmonat>();
+      beitragsmonate.clear();
       beitragsmonate.add(new Beitragsmonat(2017,1, true));
       beitragsmonate.add(new Beitragsmonat(2017,2, true));
       beitragsmonate.add(new Beitragsmonat(2017,3));
@@ -370,57 +376,64 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       };
       mitgliedlist = control.getMitgliedskontoList2(action2, null);
       mitgliedlist.paint(tabSollIst.getComposite());
+    }
 
-      ButtonArea b = new ButtonArea();
+    ButtonArea b = new ButtonArea();
 
-      b.addButton("übernehmen", new Action()
+    b.addButton("übernehmen", new Action()
+    {
+
+      @Override public void handleAction(Object context)
       {
+        Logger.info("Handle Speichern");
 
-        @Override public void handleAction(Object context)
+        for (int i = 0; i < beitragsmonate.size(); i++)
         {
-          Object o = mitgliedskontolist.getSelection();
+          Beitragsmonat beitragsmonat =  beitragsmonate.get(i);
 
-          if (o instanceof Mitgliedskonto)
+          String s = "Beitragsmonat: ";
+          s += Integer.toString(beitragsmonat.getJahr());
+          s += "-";
+          s += Integer.toString(beitragsmonat.getMonat());
+          s += " ";
+
+          if (beitragsmonat.isSelected())
           {
-            choosen = o;
-            close();
+            s += "S";
           }
           else
           {
-            o = mitgliedlist.getSelection();
-
-            if (o instanceof Mitglied)
-            {
-              choosen = o;
-              close();
-            }
+            s += "NS";
           }
-          return;
-        }
-      }, null, false, "check.png");
 
-      b.addButton("entfernen", new Action()
+          Logger.info(s);
+
+        }
+      }
+    }, null, false, "check.png");
+
+    b.addButton("entfernen", new Action()
+    {
+
+      @Override public void handleAction(Object context)
       {
+        choosen = null;
+        close();
+      }
+    }, null, false, "undo.png");
+    b.addButton("Hilfe", new DokumentationAction(), DokumentationUtil.MITGLIEDSKONTO_AUSWAHL, false,
+        "question-circle.png");
 
-        @Override public void handleAction(Object context)
-        {
-          choosen = null;
-          close();
-        }
-      }, null, false, "undo.png");
-      b.addButton("Hilfe", new DokumentationAction(), DokumentationUtil.MITGLIEDSKONTO_AUSWAHL, false,
-          "question-circle.png");
+    b.addButton("abbrechen", new Action()
+    {
 
-      b.addButton("abbrechen", new Action()
+      @Override public void handleAction(Object context)
       {
+        close();
+      }
+    }, null, false, "stop-circle.png");
+    b.paint(parent);
 
-        @Override public void handleAction(Object context)
-        {
-          close();
-        }
-      }, null, false, "stop-circle.png");
-      b.paint(parent);
-    }
   }
 
   private void updateBeitragsGrid(Composite allYears, ArrayList<Beitragsmonat> l)
@@ -458,19 +471,34 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         }
         else
         {
-          Beitragsmonat data = l.get(l.indexOf(iter));
+          final Beitragsmonat data = l.get(l.indexOf(iter));
 
-          Button b = new Button(allYears, SWT.CHECK);
+          final Button b = new Button(allYears, SWT.CHECK);
           if (data.isBezahlt())
           {
             b.setEnabled(false);
             b.setSelection(true);
           }
+
           if (data.isSelected())
           {
             // TODO: will man die Zustände mergen?
             b.setSelection(true);
           }
+
+          b.addSelectionListener(new SelectionListener()
+          {
+            @Override public void widgetSelected(SelectionEvent e)
+            {
+              data.setSelected(b.getSelection());
+            }
+
+            @Override public void widgetDefaultSelected(SelectionEvent e)
+            {
+              // TODO: what is this event?
+            }
+          });
+
           b.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
         }
       }

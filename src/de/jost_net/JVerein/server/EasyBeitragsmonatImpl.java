@@ -4,7 +4,6 @@ import de.jost_net.JVerein.rmi.*;
 import de.willuhn.datasource.db.AbstractDBObject;
 import de.willuhn.logging.Logger;
 import de.willuhn.util.ApplicationException;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.rmi.RemoteException;
 
@@ -35,7 +34,23 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
 
   @Override protected void insertCheck() throws ApplicationException
   {
-    // TODO:
+
+    try
+    {
+      if (getMonat() > 11 || getMonat() < 0)
+        throw new ApplicationException("Monat des Beitragsmonat muss zwischen 0 und 11 liegen!");
+
+      if (getMitglied() == null)
+        throw new ApplicationException("Der Beitragsmonat muss einem Nutzer zugeordnet sein.");
+
+    }
+    catch (RemoteException e)
+    {
+      e.printStackTrace();
+
+      throw new ApplicationException("Fehler beim erstellen des Beitragsmonats.");
+    }
+
   }
 
   @Override protected void updateCheck() throws ApplicationException
@@ -62,9 +77,9 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
     return (Buchung) getAttribute("buchung");
   }
 
-  @Override public void setBuchung() throws RemoteException
+  @Override public void setBuchung(Buchung b) throws RemoteException
   {
-
+    setAttribute("buchung", b.getID());
   }
 
   @Override public Mitglied getMitglied() throws RemoteException
@@ -87,9 +102,9 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
     return (Mitglied) cache.get(l);
   }
 
-  @Override public void setMitglied() throws RemoteException
+  @Override public void setMitglied(Mitglied m) throws RemoteException
   {
-    // not implemented
+    setAttribute("buchung", m.getID());
   }
 
   @Override public int getJahr() throws RemoteException
@@ -100,9 +115,9 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
     return i.intValue();
   }
 
-  @Override public void setJahr() throws RemoteException
+  @Override public void setJahr(int jahr) throws RemoteException
   {
-
+    setAttribute("jahr", jahr);
   }
 
   @Override public int getMonat() throws RemoteException
@@ -113,8 +128,8 @@ public class EasyBeitragsmonatImpl extends AbstractDBObject
     return i.intValue();
   }
 
-  @Override public void setMonat() throws RemoteException
+  @Override public void setMonat(int m) throws RemoteException
   {
-
+    setAttribute("monat", m);
   }
 }

@@ -26,15 +26,15 @@ public interface EasyBeitragsmonat extends DBObject
 {
 
   public Buchung getBuchung() throws RemoteException;
-  public void setBuchung() throws RemoteException;
+  public void setBuchung(Buchung b) throws RemoteException;
 
   public Mitglied getMitglied() throws RemoteException;
-  public void setMitglied() throws RemoteException;
+  public void setMitglied(Mitglied m) throws RemoteException;
 
   public int getJahr() throws RemoteException;
-  public void setJahr() throws RemoteException;
+  public void setJahr(int jahr) throws RemoteException;
 
   public int getMonat() throws RemoteException;
-  public void setMonat() throws RemoteException;
+  public void setMonat(int monat) throws RemoteException;
 
 }
