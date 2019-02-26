@@ -15,7 +15,6 @@ import de.willuhn.jameica.gui.input.SelectInput;
 import de.willuhn.jameica.gui.util.*;
 import de.willuhn.jameica.hbci.gui.parts.SparQuote;
 import de.willuhn.jameica.hbci.server.UmsatzTypUtil;
-import de.willuhn.logging.Logger;
 import de.willuhn.util.ApplicationException;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
@@ -170,34 +169,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     folder.setLayoutData(new GridData(FILL_BOTH));
 
     {
-//      TabGroup tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
-//      Container grNurIst = new SimpleContainer(tabNurIst.getComposite());
-//      grNurIst.addHeadline("Auswahl des Mitgliedskontos");
-//      if (text == null || text.length() == 0)
-//      {
-//        text = "Bitte wählen Sie das gewünschte Mitgliedskonto aus.";
-//      }
-//
-//      grNurIst.addText(text, true);
-//      TextInput suNa = control.getSuchName();
-//      suNa.setValue(buchung.getName());
-//      grNurIst.addLabelPair("Name", suNa);
-//      grNurIst.addLabelPair("Differenz", control.getDifferenz(DIFFERENZ.EGAL));
-//      Action action = new Action()
-//      {
-//
-//        @Override public void handleAction(Object context)
-//        {
-//          if (context == null || !(context instanceof Mitgliedskonto))
-//          {
-//            return;
-//          }
-//          choosen = context;
-//          close();
-//        }
-//      };
-//      mitgliedskontolist = control.getMitgliedskontoList(action, null);
-//      mitgliedskontolist.paint(tabNurIst.getComposite());
 
       final TabGroup tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
 
@@ -209,14 +180,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       MitgliedUtils.setNurAktive(zhl);
       MitgliedUtils.setMitglied(zhl);
       zhl.setOrder("ORDER BY name, vorname");
-
-//      String suche = "";
-//      if (getMitglied().getZahlerID() != null)
-//      {
-//        suche = getMitglied().getZahlerID().toString();
-//      }
-//      Mitglied zahlmitglied = (Mitglied) Einstellungen.getDBService()
-//          .createObject(Mitglied.class, suche);
 
       final Composite allYears = new Composite(tabNurIst.getComposite(), FILL_BOTH);
 
@@ -257,38 +220,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
     }
 
-    //
-    {
-      TabGroup tabSollIst = new TabGroup(folder, "Soll u. Ist", true, 1);
-      Container grSollIst = new SimpleContainer(tabSollIst.getComposite());
-      grSollIst.addHeadline("Auswahl des Mitgliedskontos");
-
-      if (text == null || text.length() == 0)
-      {
-        text = "Bitte wählen Sie das gewünschte Mitgliedskonto aus.";
-      }
-      grSollIst.addText(text, true);
-      control.getSuchName2(true).setValue(buchung.getName());
-      grSollIst.addLabelPair("Name", control.getSuchName2(false));
-      grSollIst.addInput(control.getSpezialSuche());
-
-      final Action action2 = new Action()
-      {
-
-        @Override public void handleAction(Object context)
-        {
-          if (context == null || !(context instanceof Mitglied))
-          {
-            return;
-          }
-          choosen = context;
-          close();
-        }
-      };
-      mitgliedlist = control.getMitgliedskontoList2(action2, null);
-      mitgliedlist.paint(tabSollIst.getComposite());
-    }
-
     ButtonArea b = new ButtonArea();
 
     b.addButton("übernehmen", new Action()
@@ -296,8 +227,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
       @Override public void handleAction(Object context)
       {
-        Logger.info("Handle Speichern");
-
         try
         {
           DBTransactionStart();
