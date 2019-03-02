@@ -5,6 +5,8 @@ import de.jost_net.JVerein.gui.control.MitgliedControl;
 import de.jost_net.JVerein.rmi.EasyBeitragsmonat;
 import de.jost_net.JVerein.server.EasyBeitragsmonatImpl;
 import de.jost_net.JVerein.server.MitgliedUtils;
+import de.jost_net.JVerein.util.Scoring;
+import de.willuhn.datasource.GenericIterator;
 import de.willuhn.datasource.db.AbstractDBObject;
 import de.willuhn.datasource.rmi.DBIterator;
 import de.willuhn.datasource.rmi.DBService;
@@ -161,6 +163,28 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   }
 
+  private Mitglied getMitgliedGuess() throws RemoteException
+  {
+    DBIterator<Mitglied> mitglieder = Einstellungen.getDBService()
+        .createList(Mitglied.class);
+    mitglieder.setOrder("order by name, vorname");
+
+    if (buchung.getName() != null)
+    {
+      GenericIterator it2 = Scoring
+          .filterMitgliederByScoring(buchung.getName(), mitglieder);
+
+      if (it2.hasNext())
+      {
+        // maybe we drop other equal matches here.
+        return (Mitglied) it2.next();
+      }
+
+    }
+
+    return null;
+  }
+
   @Override
   protected void paint(Composite parent) throws Exception
   {
@@ -193,9 +217,19 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         {
           EasyBeitragsmonat next = preIter.next();
           preselected = next.getMitglied();
-
-          selectAndLoadMitglied(preselected, allYears, tabNurIst);
         }
+        else
+        {
+          // there is no Mitglied assigned to this Buchung yet.
+          preselected = getMitgliedGuess();
+          // TODO: maybe this should not happen automatically?
+          // TODO: maybe we should have a minimal score here?
+        }
+      }
+
+      if (preselected != null)
+      {
+        selectAndLoadMitglied(preselected, allYears, tabNurIst);
       }
 
       zahler = new SelectInput(zhl, preselected);
