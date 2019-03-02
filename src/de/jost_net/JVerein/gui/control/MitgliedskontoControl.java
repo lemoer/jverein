@@ -762,11 +762,6 @@ public class MitgliedskontoControl extends AbstractControl
           {
             ArrayList<Mitgliedskonto> ergebnis = new ArrayList<Mitgliedskonto>();
 
-            // In case the text search input is used, we calculate
-            // an "equality" score for each Mitgliedskonto (aka
-            // Mitgliedskontobuchung) entry. Only the entries with
-            // score == maxScore will be shown.
-            Integer maxScore = 0;
             while (rs.next())
             {
               Mitgliedskonto mk = (Mitgliedskonto) Einstellungen.getDBService()
@@ -790,38 +785,6 @@ public class MitgliedskontoControl extends AbstractControl
                 continue;
               }
 
-              if (suchname != null && suchname.getValue() != null)
-              {
-                StringTokenizer tok = new StringTokenizer(
-                    (String) suchname.getValue(), " ,-");
-                Integer score = 0;
-                while (tok.hasMoreElements())
-                {
-                  String nextToken = tok.nextToken();
-                  if (nextToken.length() > 3)
-                  {
-                    score += scoreWord(nextToken, mk.getMitglied().getName());
-                    score += scoreWord(nextToken,
-                        mk.getMitglied().getVorname());
-                    score += scoreWord(nextToken, mk.getZweck1());
-                  }
-                }
-
-                if (maxScore < score)
-                {
-                  maxScore = score;
-                  // We found a Mitgliedskonto matching with a higher equality
-                  // score, so we drop all previous matches, because they were
-                  // less equal.
-                  ergebnis.clear();
-                }
-                else if (maxScore > score)
-                {
-                  // This match is worse, so skip it.
-                  continue;
-                }
-              }
-
               ergebnis.add(mk);
             }
             return PseudoIterator.fromArray(
@@ -829,8 +792,84 @@ public class MitgliedskontoControl extends AbstractControl
           }
         });
 
-    return mitgliedskonten;
+    if (suchname != null && suchname.getValue() != null)
+    {
+      return filterByScoring((String) suchname.getValue(), mitgliedskonten, new Scorable()
+      {
+
+        @Override public int score(String nextToken, Object o)
+            throws RemoteException
+        {
+          Mitgliedskonto mk = (Mitgliedskonto) o;
+
+          return scoreWord(nextToken, mk.getMitglied().getName()) + scoreWord(
+              nextToken, mk.getMitglied().getVorname()) + scoreWord(nextToken,
+              mk.getZweck1());
+        }
+      });
+    }
+    else
+    {
+      return mitgliedskonten;
+    }
   }
+
+  private GenericIterator filterByScoring(String suchstring, PseudoIterator it, Scorable s)
+      throws RemoteException
+  {
+    // transform
+    ArrayList<Object> ergebnis = new ArrayList<Object>();
+
+    // In case the text search input is used, we calculate
+    // an "equality" score for each Mitgliedskonto (aka
+    // Mitgliedskontobuchung) entry. Only the entries with
+    // score == maxScore will be shown.
+    Integer maxScore = 0;
+
+    while (it.hasNext())
+    {
+      Object mk =  (Object) it.next();
+      
+      StringTokenizer tok = new StringTokenizer(suchstring, " ,-");
+      Integer score = 0;
+
+      while (tok.hasMoreElements())
+      {
+        String nextToken = tok.nextToken();
+        if (nextToken.length() > 3)
+        {
+          score = s.score(nextToken, mk);
+        }
+      }
+
+      if (maxScore < score)
+      {
+        maxScore = score;
+        // We found a Mitgliedskonto matching with a higher equality
+        // score, so we drop all previous matches, because they were
+        // less equal.
+        ergebnis.clear();
+      }
+      else if (maxScore > score)
+      {
+        // This match is worse, so skip it.
+        continue;
+      }
+
+      ergebnis.add(mk);
+
+    }
+
+    return PseudoIterator.fromArray(
+        ergebnis.toArray(new GenericObject[ergebnis.size()]));
+  }
+
+  public interface Scorable {
+    // Any number of final, static fields
+    // Any number of abstract method declarations\
+    public int score(String nextToken, Object o) throws RemoteException;
+  }
+
 
   public Integer scoreWord(String word, String in)
   {
