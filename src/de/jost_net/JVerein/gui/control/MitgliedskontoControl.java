@@ -28,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import de.jost_net.JVerein.util.Scoring;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Event;
@@ -663,21 +664,9 @@ public class MitgliedskontoControl extends AbstractControl
         .createList(Mitglied.class);
     mitglieder.setOrder("order by name, vorname");
 
-
     if (suchname2 != null && suchname2.getValue() != null)
     {
-      return filterByScoring((String) suchname2.getValue(), mitglieder, new Scorable()
-      {
-
-        @Override public int score(String nextToken, Object o)
-            throws RemoteException
-        {
-          Mitglied m = (Mitglied) o;
-
-          return scoreWord(nextToken, m.getName())
-              + scoreWord(nextToken, m.getVorname());
-        }
-      });
+      return Scoring.filterMitgliederByScoring((String) suchname2.getValue(), mitglieder);
     }
     else
     {
@@ -782,19 +771,7 @@ public class MitgliedskontoControl extends AbstractControl
 
     if (suchname != null && suchname.getValue() != null)
     {
-      return filterByScoring((String) suchname.getValue(), mitgliedskonten, new Scorable()
-      {
-
-        @Override public int score(String nextToken, Object o)
-            throws RemoteException
-        {
-          Mitgliedskonto mk = (Mitgliedskonto) o;
-
-          return scoreWord(nextToken, mk.getMitglied().getName()) + scoreWord(
-              nextToken, mk.getMitglied().getVorname()) + scoreWord(nextToken,
-              mk.getZweck1());
-        }
-      });
+      return Scoring.filterMitgliedskontenByScoring((String) suchname.getValue(), mitgliedskonten);
     }
     else
     {
@@ -802,97 +779,7 @@ public class MitgliedskontoControl extends AbstractControl
     }
   }
 
-  private GenericIterator filterByScoring(String suchstring, GenericIterator it, Scorable s)
-      throws RemoteException
-  {
-    // transform
-    ArrayList<Object> ergebnis = new ArrayList<Object>();
 
-    // In case the text search input is used, we calculate
-    // an "equality" score for each Mitgliedskonto (aka
-    // Mitgliedskontobuchung) entry. Only the entries with
-    // score == maxScore will be shown.
-    Integer maxScore = 0;
-
-    while (it.hasNext())
-    {
-      Object mk =  (Object) it.next();
-
-      StringTokenizer tok = new StringTokenizer(suchstring, " ,-");
-      Integer score = 0;
-
-      while (tok.hasMoreElements())
-      {
-        String nextToken = tok.nextToken();
-        if (nextToken.length() > 3)
-        {
-          score = s.score(nextToken, mk);
-        }
-      }
-
-      if (maxScore < score)
-      {
-        maxScore = score;
-        // We found a Mitgliedskonto matching with a higher equality
-        // score, so we drop all previous matches, because they were
-        // less equal.
-        ergebnis.clear();
-      }
-      else if (maxScore > score)
-      {
-        // This match is worse, so skip it.
-        continue;
-      }
-
-      ergebnis.add(mk);
-
-    }
-
-    return PseudoIterator.fromArray(
-        ergebnis.toArray(new GenericObject[ergebnis.size()]));
-  }
-
-  public interface Scorable {
-    // Any number of final, static fields
-    // Any number of abstract method declarations\
-    public int score(String nextToken, Object o) throws RemoteException;
-  }
-
-
-  public Integer scoreWord(String word, String in)
-  {
-    word = reduceWord(word);
-
-    Integer wordScore = 0;
-    StringTokenizer tok = new StringTokenizer(in, " ,-");
-
-    while (tok.hasMoreElements())
-    {
-      String nextToken = tok.nextToken();
-      nextToken = reduceWord(nextToken);
-
-      // Full match is twice worth
-      if (nextToken.equals(word))
-      {
-        wordScore += 2;
-      }
-      else if (nextToken.contains(word))
-      {
-        wordScore += 1;
-      }
-    }
-
-    return wordScore;
-  }
-
-  public String reduceWord(String word)
-  {
-    // We replace "ue" -> "u" and "ü" -> "u", because some bank institutions
-    // remove the dots "ü" -> "u". So we get "u" == "ü" == "ue".
-    return word.toLowerCase().replaceAll("ä", "a").replaceAll("ae", "a")
-        .replaceAll("ö", "o").replaceAll("oe", "o").replaceAll("ü", "u")
-        .replaceAll("ue", "u").replaceAll("ß", "s").replaceAll("ss", "s");
-  }
 
   public Button getStartRechnungButton(final Object currentObject)
   {
