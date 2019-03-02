@@ -657,44 +657,32 @@ public class MitgliedskontoControl extends AbstractControl
     }
   }
 
-  private GenericIterator<Mitglied> getMitgliedIterator() throws RemoteException
+  private GenericIterator getMitgliedIterator() throws RemoteException
   {
     DBIterator<Mitglied> mitglieder = Einstellungen.getDBService()
         .createList(Mitglied.class);
-    // MitgliedUtils.setMitgliedOderSpender(mitglieder);
+    mitglieder.setOrder("order by name, vorname");
+
+
     if (suchname2 != null && suchname2.getValue() != null)
     {
-      StringBuffer where = new StringBuffer();
-      ArrayList<String> object = new ArrayList<String>();
-      StringTokenizer tok = new StringTokenizer((String) suchname2.getValue(),
-          " ,-");
-      where.append("(");
-      boolean first = true;
-      while (tok.hasMoreElements())
+      return filterByScoring((String) suchname2.getValue(), mitglieder, new Scorable()
       {
-        if (!first)
+
+        @Override public int score(String nextToken, Object o)
+            throws RemoteException
         {
-          where.append("or ");
+          Mitglied m = (Mitglied) o;
+
+          return scoreWord(nextToken, m.getName())
+              + scoreWord(nextToken, m.getVorname());
         }
-        first = false;
-        where.append(
-            "upper(name) like upper(?) or upper(vorname) like upper(?) ");
-        String o = tok.nextToken();
-        if ((Boolean) getSpezialSuche().getValue())
-        {
-          o = "%" + o + "%";
-        }
-        object.add(o);
-        object.add(o);
-      }
-      where.append(")");
-      if (where.length() > 2)
-      {
-        mitglieder.addFilter(where.toString(), object.toArray());
-      }
+      });
     }
-    mitglieder.setOrder("order by name, vorname");
-    return mitglieder;
+    else
+    {
+      return mitglieder;
+    }
   }
 
   public GenericIterator getMitgliedskontoIterator() throws RemoteException
@@ -814,7 +802,7 @@ public class MitgliedskontoControl extends AbstractControl
     }
   }
 
-  private GenericIterator filterByScoring(String suchstring, PseudoIterator it, Scorable s)
+  private GenericIterator filterByScoring(String suchstring, GenericIterator it, Scorable s)
       throws RemoteException
   {
     // transform
@@ -829,7 +817,7 @@ public class MitgliedskontoControl extends AbstractControl
     while (it.hasNext())
     {
       Object mk =  (Object) it.next();
-      
+
       StringTokenizer tok = new StringTokenizer(suchstring, " ,-");
       Integer score = 0;
 
