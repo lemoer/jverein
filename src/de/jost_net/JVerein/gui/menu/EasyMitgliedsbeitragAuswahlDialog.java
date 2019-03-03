@@ -58,7 +58,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   private SelectInput zahler;
 
-  private Label soll;
   private Label ist;
 
   private TabGroup tabNurIst;
@@ -165,7 +164,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   private void updateCalculation()
   {
-    String text = "<b>Soll:</b>\n\n";
     double sum = 0;
 
     for (int i = 0; i < beitragsmonate.size(); i++)
@@ -175,14 +173,8 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       if (!beitragsmonat.isSelected())
         continue;
 
-      text += "+ " + beitragsmonat.getSollBetrag() + "\n";
       sum += beitragsmonat.getSollBetrag();
     }
-
-    text += "---------------\n";
-    text += "= " + sum + "\n";
-
-    soll.setText(text);
 
     double istValue;
     try
@@ -195,12 +187,12 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       istValue = 0;
     }
 
-    String istText = "<b>Ist:</b> ";
-    istText += istValue + "\n";
-    istText += "<b>Soll:</b> ";
-    istText += sum + "\n";
-    istText += "<b>Differenz:</b> ";
-    istText += (istValue - sum);
+    String istText = "Ist-Buchung: ";
+    istText += String.format("%.2f", istValue) + "\n";
+    istText += "Selektiert: ";
+    istText += String.format("%.2f",sum) + "\n";
+    istText += "Differenz: ";
+    istText += String.format("%.2f", istValue - sum);
 
     ist.setText(istText);
 
@@ -249,16 +241,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       test.getHorizontalBar().setVisible(false);
       test.getVerticalBar().setVisible(false);
 
-
-      // TODO: any style?
-      soll = new Label(test, 0);
-      soll.setText("TBD");
-      soll.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
-
-      ist = new Label(test, 0);
-      ist.setText("TBD2");
-      ist.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
-
       MitgliedControl mitgliedControl = new MitgliedControl(null);
 
       DBIterator<Mitglied> zhl = Einstellungen.getDBService()
@@ -268,7 +250,11 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       MitgliedUtils.setMitglied(zhl);
       zhl.setOrder("ORDER BY name, vorname");
 
-      final Composite allYears = new Composite(tabNurIst.getComposite(), FILL_BOTH);
+      final Composite allYears = new Composite(test, FILL_BOTH);
+
+      ist = new Label(test, 0);
+      ist.setText("TBD2");
+      ist.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
 
       // (maybe) get preselected mitglied
       Mitglied preselected = null;
