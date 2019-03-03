@@ -9,42 +9,28 @@ import de.jost_net.JVerein.util.Scoring;
 import de.willuhn.datasource.GenericIterator;
 import de.willuhn.datasource.db.AbstractDBObject;
 import de.willuhn.datasource.rmi.DBIterator;
-import de.willuhn.datasource.rmi.DBService;
-import de.willuhn.datasource.rmi.ResultSetExtractor;
-import de.willuhn.jameica.gui.input.CheckboxInput;
-import de.willuhn.jameica.gui.input.Input;
 import de.willuhn.jameica.gui.input.SelectInput;
 import de.willuhn.jameica.gui.util.*;
-import de.willuhn.jameica.hbci.gui.parts.SparQuote;
-import de.willuhn.jameica.hbci.server.UmsatzTypUtil;
 import de.willuhn.util.ApplicationException;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.*;
 
 import de.jost_net.JVerein.gui.action.DokumentationAction;
 import de.jost_net.JVerein.gui.control.MitgliedskontoControl;
-import de.jost_net.JVerein.gui.control.MitgliedskontoControl.DIFFERENZ;
 import de.jost_net.JVerein.gui.dialogs.MitgliedskontoAuswahlDialog;
 import de.jost_net.JVerein.gui.view.DokumentationUtil;
 import de.jost_net.JVerein.rmi.Buchung;
 import de.jost_net.JVerein.rmi.Mitglied;
-import de.jost_net.JVerein.rmi.Mitgliedskonto;
 import de.willuhn.jameica.gui.Action;
 import de.willuhn.jameica.gui.dialogs.AbstractDialog;
-import de.willuhn.jameica.gui.input.TextInput;
 import de.willuhn.jameica.gui.parts.ButtonArea;
 import de.willuhn.jameica.gui.parts.TablePart;
-import org.relique.jdbc.csv.SqlParser;
-import sun.rmi.runtime.Log;
 
 import java.rmi.RemoteException;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.*;
 
 import static org.eclipse.swt.layout.GridData.*;
@@ -72,6 +58,11 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   private SelectInput zahler;
 
+  private Label soll;
+  private Label ist;
+
+  private TabGroup tabNurIst;
+
   public EasyMitgliedsbeitragAuswahlDialog(Buchung buchung)
   {
     super(MitgliedskontoAuswahlDialog.POSITION_MOUSE, true);
@@ -94,19 +85,28 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
     private boolean selected;
 
-    Beitragsmonat(int jahr, int monat, boolean bezahlt) {
+    private Double sollBetrag;
+
+    Beitragsmonat(int jahr, int monat, Double sollBetrag, boolean bezahlt) {
       this.jahr = jahr;
       this.monat = monat;
       this.bezahlt = bezahlt;
       this.selected = false;
+      this.sollBetrag = sollBetrag;
       assert jahr > 1900;
       assert monat >= 0;
       assert monat < 12;
     }
 
-    Beitragsmonat(int jahr, int monat) {
-      this(jahr, monat, false);
+    Beitragsmonat(int jahr, int monat, Double sollBetrag) {
+      this(jahr, monat, sollBetrag, false);
     }
+
+    Beitragsmonat(int jahr, int monat) {
+      this(jahr, monat, null);
+    }
+
+    public Double getSollBetrag() { return sollBetrag; }
 
     public int getJahr()
     {
@@ -163,6 +163,51 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   }
 
+  private void updateCalculation()
+  {
+    String text = "<b>Soll:</b>\n\n";
+    double sum = 0;
+
+    for (int i = 0; i < beitragsmonate.size(); i++)
+    {
+      Beitragsmonat beitragsmonat =  beitragsmonate.get(i);
+
+      if (!beitragsmonat.isSelected())
+        continue;
+
+      text += "+ " + beitragsmonat.getSollBetrag() + "\n";
+      sum += beitragsmonat.getSollBetrag();
+    }
+
+    text += "---------------\n";
+    text += "= " + sum + "\n";
+
+    soll.setText(text);
+
+    double istValue;
+    try
+    {
+      istValue = buchung.getBetrag();
+    }
+    catch (RemoteException e)
+    {
+      e.printStackTrace();
+      istValue = 0;
+    }
+
+    String istText = "<b>Ist:</b> ";
+    istText += istValue + "\n";
+    istText += "<b>Soll:</b> ";
+    istText += sum + "\n";
+    istText += "<b>Differenz:</b> ";
+    istText += (istValue - sum);
+
+    ist.setText(istText);
+
+    tabNurIst.getComposite().layout();
+
+  }
+
   private Mitglied getMitgliedGuess() throws RemoteException
   {
     DBIterator<Mitglied> mitglieder = Einstellungen.getDBService()
@@ -194,7 +239,25 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
     {
 
-      final TabGroup tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
+      tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
+
+
+      final Composite test = new Composite(tabNurIst.getComposite(), FILL_BOTH);
+      GridLayout testLayout = new GridLayout(2, false);
+      test.setLayout(testLayout);
+
+      test.getHorizontalBar().setVisible(false);
+      test.getVerticalBar().setVisible(false);
+
+
+      // TODO: any style?
+      soll = new Label(test, 0);
+      soll.setText("TBD");
+      soll.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
+
+      ist = new Label(test, 0);
+      ist.setText("TBD2");
+      ist.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
 
       MitgliedControl mitgliedControl = new MitgliedControl(null);
 
@@ -412,13 +475,16 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
         Buchung b1 = next.getBuchung();
         Buchung b2 = EasyMitgliedsbeitragAuswahlDialog.this.buchung;
+
+        double sollBetrag = sel.getBeitragsgruppe().getBetragMonatlich();
+
         if (b1 == null || !b1.equals(b2))
         {
-          beitragsmonate.add(new Beitragsmonat(jahr, monat, true));
+          beitragsmonate.add(new Beitragsmonat(jahr, monat, sollBetrag, true));
         }
         else
         {
-          Beitragsmonat e = new Beitragsmonat(jahr, monat);
+          Beitragsmonat e = new Beitragsmonat(jahr, monat, sollBetrag);
           e.setSelected(true);
           beitragsmonate.add(e);
         }
@@ -429,7 +495,8 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         int jahr = it.get(Calendar.YEAR);
         int monat = it.get(Calendar.MONTH);
 
-        Beitragsmonat bm = new Beitragsmonat(jahr, monat);
+        double sollBetrag = sel.getBeitragsgruppe().getBetragMonatlich();
+        Beitragsmonat bm = new Beitragsmonat(jahr, monat, sollBetrag);
         if (!beitragsmonate.contains(bm))
           beitragsmonate.add(bm);
       }
@@ -506,6 +573,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
             @Override public void widgetSelected(SelectionEvent e)
             {
               data.setSelected(b.getSelection());
+              updateCalculation();
             }
 
             @Override public void widgetDefaultSelected(SelectionEvent e)
@@ -518,6 +586,8 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         }
       }
     }
+
+    updateCalculation();
   }
 
   private void DBTransactionStart() throws RemoteException
