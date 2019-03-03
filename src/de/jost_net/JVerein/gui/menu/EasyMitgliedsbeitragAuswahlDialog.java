@@ -62,6 +62,8 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   private TabGroup tabNurIst;
 
+  private Composite allYears;
+
   public EasyMitgliedsbeitragAuswahlDialog(Buchung buchung)
   {
     super(MitgliedskontoAuswahlDialog.POSITION_MOUSE, true);
@@ -162,6 +164,43 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   }
 
+  private void autoFill()
+  {
+    double differenz = 0;
+    try
+    {
+      differenz = buchung.getBetrag();
+    }
+    catch (RemoteException e)
+    {
+      e.printStackTrace();
+    }
+
+    // We want to fill the early months first
+    Collections.sort(beitragsmonate);
+
+    for (Beitragsmonat beitragsmonat : beitragsmonate)
+    {
+
+      if (beitragsmonat.isBezahlt())
+      {
+        continue;
+      }
+
+      beitragsmonat.setSelected(false);
+
+      if (differenz <= 0)
+      {
+        continue;
+      }
+
+      beitragsmonat.setSelected(true);
+      differenz -= beitragsmonat.sollBetrag;
+    }
+
+    updateBeitragsGrid();
+  }
+
   private void updateCalculation()
   {
     double sum = 0;
@@ -233,7 +272,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
       tabNurIst = new TabGroup(folder, "nur Ist", false, 1);
 
-
       final Composite test = new Composite(tabNurIst.getComposite(), FILL_BOTH);
       GridLayout testLayout = new GridLayout(2, false);
       test.setLayout(testLayout);
@@ -250,11 +288,28 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       MitgliedUtils.setMitglied(zhl);
       zhl.setOrder("ORDER BY name, vorname");
 
-      final Composite allYears = new Composite(test, FILL_BOTH);
+      allYears = new Composite(test, FILL_BOTH);
+      allYears.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
 
-      ist = new Label(test, 0);
+      Composite rightCol = new Composite(test, FILL_BOTH);
+      GridLayout rightColLayout = new GridLayout(1, false);
+      rightCol.setLayout(rightColLayout);
+      rightCol.getHorizontalBar().setVisible(false);
+      rightCol.getVerticalBar().setVisible(false);
+
+      ist = new Label(rightCol, 0);
       ist.setText("TBD2");
       ist.setLayoutData(new GridData(VERTICAL_ALIGN_BEGINNING));
+
+      de.willuhn.jameica.gui.parts.Button autoFillBtn = new de.willuhn.jameica.gui.parts.Button("AutoFill", new Action()
+      {
+        @Override public void handleAction(Object context)
+            throws ApplicationException
+        {
+          autoFill();
+        }
+      });
+      autoFillBtn.paint(rightCol);
 
       // (maybe) get preselected mitglied
       Mitglied preselected = null;
@@ -300,7 +355,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
       allYears.getHorizontalBar().setVisible(false);
       allYears.getVerticalBar().setVisible(false);
-
     }
 
     ButtonArea b = new ButtonArea();
@@ -438,8 +492,6 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         calBis.set(Calendar.DAY_OF_MONTH, 1);
       }
 
-      SWTUtil.disposeChildren(allYears);
-
       //GridLayout allYearsLayout = new GridLayout(13, false);
       //allYears.setLayout(allYearsLayout);
 
@@ -490,10 +542,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       GridLayout allYearsLayout = new GridLayout(13, false);
       allYears.setLayout(allYearsLayout);
 
-      updateBeitragsGrid(allYears, beitragsmonate);
-
-      allYears.layout();
-      tabNurIst.getComposite().layout();
+      updateBeitragsGrid();
 
     }
     catch (RemoteException e)
@@ -504,8 +553,10 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     }
   }
 
-  private void updateBeitragsGrid(Composite allYears, ArrayList<Beitragsmonat> l)
+  private void updateBeitragsGrid()
   {
+    SWTUtil.disposeChildren(allYears);
+
     newLbl(allYears, " ");
     newLbl(allYears, "J");
     newLbl(allYears, "F");
@@ -520,8 +571,8 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     newLbl(allYears, "N");
     newLbl(allYears, "D");
 
-    Beitragsmonat min = Collections.min(l);
-    Beitragsmonat max = Collections.max(l);
+    Beitragsmonat min = Collections.min(beitragsmonate);
+    Beitragsmonat max = Collections.max(beitragsmonate);
 
     for (int i = min.getJahr(); i <= max.getJahr(); i++)
     {
@@ -531,7 +582,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       {
         Beitragsmonat iter = new Beitragsmonat(i, j);
 
-        if (!l.contains(iter))
+        if (!beitragsmonate.contains(iter))
         {
           // Mitglied ist noch nicht eingetreten.
           newLbl(allYears, "x");
@@ -539,7 +590,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         }
         else
         {
-          final Beitragsmonat data = l.get(l.indexOf(iter));
+          final Beitragsmonat data = beitragsmonate.get(beitragsmonate.indexOf(iter));
 
           final Button b = new Button(allYears, SWT.CHECK);
           if (data.isBezahlt())
@@ -572,6 +623,9 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
         }
       }
     }
+
+    allYears.layout();
+    tabNurIst.getComposite().layout();
 
     updateCalculation();
   }
