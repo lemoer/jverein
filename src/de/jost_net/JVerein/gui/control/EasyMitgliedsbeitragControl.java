@@ -70,14 +70,13 @@ public class EasyMitgliedsbeitragControl extends AbstractControl
     if (bis != null)
     {
       calBis.setTime(bis);
-      calBis.setTime(von);
-      calBis.set(Calendar.DAY_OF_MONTH, 1);
+      calBis.set(Calendar.DAY_OF_MONTH, 2);
     }
     else
     {
       calBis.setTime(new Date());
 
-      calBis.set(Calendar.DAY_OF_MONTH, 1);
+      calBis.set(Calendar.DAY_OF_MONTH, 2);
     }
 
     //GridLayout allYearsLayout = new GridLayout(13, false);
