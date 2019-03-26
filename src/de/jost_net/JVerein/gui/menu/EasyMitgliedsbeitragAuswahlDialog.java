@@ -1,10 +1,12 @@
 package de.jost_net.JVerein.gui.menu;
 
 import de.jost_net.JVerein.Einstellungen;
+import de.jost_net.JVerein.gui.control.EasyMitgliedsbeitragControl;
 import de.jost_net.JVerein.gui.control.MitgliedControl;
 import de.jost_net.JVerein.rmi.EasyBeitragsmonat;
 import de.jost_net.JVerein.server.EasyBeitragsmonatImpl;
 import de.jost_net.JVerein.server.MitgliedUtils;
+import de.jost_net.JVerein.util.Beitragsmonat;
 import de.jost_net.JVerein.util.Scoring;
 import de.willuhn.datasource.GenericIterator;
 import de.willuhn.datasource.db.AbstractDBObject;
@@ -20,7 +22,6 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 
 import de.jost_net.JVerein.gui.action.DokumentationAction;
-import de.jost_net.JVerein.gui.control.MitgliedskontoControl;
 import de.jost_net.JVerein.gui.dialogs.MitgliedskontoAuswahlDialog;
 import de.jost_net.JVerein.gui.view.DokumentationUtil;
 import de.jost_net.JVerein.rmi.Buchung;
@@ -44,7 +45,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
 
   private Object choosen = null;
 
-  private MitgliedskontoControl control;
+  private EasyMitgliedsbeitragControl control;
 
   private TablePart mitgliedskontolist = null;
 
@@ -73,95 +74,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
     this.setSize(600, 700);
     this.setTitle("Mitgliedskonto-Auswahl");
     this.buchung = buchung;
-    control = new MitgliedskontoControl(null);
-  }
-
-  class Beitragsmonat implements Comparable<Beitragsmonat> {
-
-    private final int jahr;
-
-    private final int monat;
-
-    private final boolean bezahlt;
-
-    private boolean selected;
-
-    private Double sollBetrag;
-
-    Beitragsmonat(int jahr, int monat, Double sollBetrag, boolean bezahlt) {
-      this.jahr = jahr;
-      this.monat = monat;
-      this.bezahlt = bezahlt;
-      this.selected = false;
-      this.sollBetrag = sollBetrag;
-      assert jahr > 1900;
-      assert monat >= 0;
-      assert monat < 12;
-    }
-
-    Beitragsmonat(int jahr, int monat, Double sollBetrag) {
-      this(jahr, monat, sollBetrag, false);
-    }
-
-    Beitragsmonat(int jahr, int monat) {
-      this(jahr, monat, null);
-    }
-
-    public Double getSollBetrag() { return sollBetrag; }
-
-    public int getJahr()
-    {
-      return jahr;
-    }
-
-    public int getMonat()
-    {
-      return monat;
-    }
-
-    public boolean isSelected()
-    {
-      return this.selected;
-    }
-
-    public void setSelected(boolean selected)
-    {
-      this.selected = selected;
-    }
-
-    public boolean isBezahlt()
-    {
-      return bezahlt;
-    }
-
-    public int getFastRepr()
-    {
-      return getMonat() + 100 * getJahr();
-    }
-
-    @Override public int compareTo(Beitragsmonat o)
-    {
-      if (getFastRepr() > o.getFastRepr())
-      {
-        return 1;
-      }
-      else if (getFastRepr() == o.getFastRepr()) {
-        return 0;
-      }
-      else {
-        return -1;
-      }
-    }
-
-    @Override public boolean equals(Object o)
-    {
-      if (!(o instanceof Beitragsmonat))
-        return false;
-
-
-      return getFastRepr() == ((Beitragsmonat) o).getFastRepr();
-    }
-
+    control = new EasyMitgliedsbeitragControl(null);
   }
 
   private void autoFill()
@@ -195,7 +108,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
       }
 
       beitragsmonat.setSelected(true);
-      differenz -= beitragsmonat.sollBetrag;
+      differenz -= beitragsmonat.getSollBetrag();
     }
 
     updateBeitragsGrid();
@@ -461,83 +374,7 @@ public class EasyMitgliedsbeitragAuswahlDialog extends AbstractDialog<Object>
   {
     try
     {
-      Date von = sel.getEintritt();
-      Date bis = sel.getAustritt();
-
-      GregorianCalendar calVon = new GregorianCalendar();
-      GregorianCalendar calBis = new GregorianCalendar();
-
-      if (von != null)
-      {
-        calVon.setTime(von);
-        calVon.set(Calendar.DAY_OF_MONTH, 1);
-      }
-      else
-      {
-        // TODO: WAS NUN?
-      }
-
-      if (bis != null)
-      {
-        calBis.setTime(bis);
-        calBis.setTime(von);
-        calBis.set(Calendar.DAY_OF_MONTH, 1);
-      }
-      else
-      {
-        // show checkboxes 1 year into future from now
-        calBis.setTime(new Date());
-        calBis.add(Calendar.YEAR, 1);
-
-        calBis.set(Calendar.DAY_OF_MONTH, 1);
-      }
-
-      //GridLayout allYearsLayout = new GridLayout(13, false);
-      //allYears.setLayout(allYearsLayout);
-
-      Calendar it = (Calendar) calVon.clone();
-      Calendar end = calBis;
-
-      DBIterator<EasyBeitragsmonat> zhl = Einstellungen.getDBService()
-          .createList(EasyBeitragsmonat.class);
-      zhl.addFilter("mitglied=?", sel.getID());
-
-      beitragsmonate.clear();
-
-      while (zhl.hasNext())
-      {
-        EasyBeitragsmonat next =  zhl.next();
-
-        int jahr = next.getJahr();
-        int monat = next.getMonat();
-
-        Buchung b1 = next.getBuchung();
-        Buchung b2 = EasyMitgliedsbeitragAuswahlDialog.this.buchung;
-
-        double sollBetrag = sel.getBeitragsgruppe().getBetragMonatlich();
-
-        if (b1 == null || !b1.equals(b2))
-        {
-          beitragsmonate.add(new Beitragsmonat(jahr, monat, sollBetrag, true));
-        }
-        else
-        {
-          Beitragsmonat e = new Beitragsmonat(jahr, monat, sollBetrag);
-          e.setSelected(true);
-          beitragsmonate.add(e);
-        }
-      }
-
-      for (; it.before(end); it.add(Calendar.MONTH, 1)) {
-
-        int jahr = it.get(Calendar.YEAR);
-        int monat = it.get(Calendar.MONTH);
-
-        double sollBetrag = sel.getBeitragsgruppe().getBetragMonatlich();
-        Beitragsmonat bm = new Beitragsmonat(jahr, monat, sollBetrag);
-        if (!beitragsmonate.contains(bm))
-          beitragsmonate.add(bm);
-      }
+      beitragsmonate = control.getBeitragsmonateByMitglied(sel, buchung);
 
       GridLayout allYearsLayout = new GridLayout(13, false);
       allYears.setLayout(allYearsLayout);

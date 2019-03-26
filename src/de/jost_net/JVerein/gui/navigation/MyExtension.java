@@ -17,68 +17,7 @@
 package de.jost_net.JVerein.gui.navigation;
 
 import de.jost_net.JVerein.Einstellungen;
-import de.jost_net.JVerein.gui.action.AboutAction;
-import de.jost_net.JVerein.gui.action.AbrechnungSEPAAction;
-import de.jost_net.JVerein.gui.action.AbrechnunslaufListAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenAbrechnungAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenAllgemeinAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenAnzeigeAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenBuchfuehrungAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenDateinamenAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenMailAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenMitgliedAnsichtAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenMitgliederSpaltenAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenRechnungenAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenSpendenbescheinigungenAction;
-import de.jost_net.JVerein.gui.action.AdministrationEinstellungenStatistikAction;
-import de.jost_net.JVerein.gui.action.AdressenSucheAction;
-import de.jost_net.JVerein.gui.action.AdresstypListAction;
-import de.jost_net.JVerein.gui.action.AnfangsbestandListAction;
-import de.jost_net.JVerein.gui.action.ArbeitseinsatzUeberpruefungAction;
-import de.jost_net.JVerein.gui.action.AuswertungAdressenAction;
-import de.jost_net.JVerein.gui.action.AuswertungKursteilnehmerAction;
-import de.jost_net.JVerein.gui.action.AuswertungMitgliedAction;
-import de.jost_net.JVerein.gui.action.BackupCreateAction;
-import de.jost_net.JVerein.gui.action.BackupRestoreAction;
-import de.jost_net.JVerein.gui.action.BeitragsgruppeSucheAction;
-import de.jost_net.JVerein.gui.action.BuchungsListeAction;
-import de.jost_net.JVerein.gui.action.BuchungsartListAction;
-import de.jost_net.JVerein.gui.action.BuchungsklasseListAction;
-import de.jost_net.JVerein.gui.action.BuchungsklasseSaldoAction;
-import de.jost_net.JVerein.gui.action.BuchungsuebernahmeAction;
-import de.jost_net.JVerein.gui.action.DokumentationAction;
-import de.jost_net.JVerein.gui.action.EigenschaftGruppeListeAction;
-import de.jost_net.JVerein.gui.action.EigenschaftListeAction;
-import de.jost_net.JVerein.gui.action.FamilienbeitragAction;
-import de.jost_net.JVerein.gui.action.FelddefinitionenAction;
-import de.jost_net.JVerein.gui.action.FormularListeAction;
-import de.jost_net.JVerein.gui.action.JahresabschlussListAction;
-import de.jost_net.JVerein.gui.action.JahressaldoAction;
-import de.jost_net.JVerein.gui.action.JubilaeenAction;
-import de.jost_net.JVerein.gui.action.KontenrahmenExportAction;
-import de.jost_net.JVerein.gui.action.KontenrahmenImportAction;
-import de.jost_net.JVerein.gui.action.KontoListAction;
-import de.jost_net.JVerein.gui.action.KursteilnehmerSucheAction;
-import de.jost_net.JVerein.gui.action.LehrgaengeListeAction;
-import de.jost_net.JVerein.gui.action.LehrgangsartListeAction;
-import de.jost_net.JVerein.gui.action.LesefelddefinitionenAction;
-import de.jost_net.JVerein.gui.action.MailListeAction;
-import de.jost_net.JVerein.gui.action.MailVorlagenAction;
-import de.jost_net.JVerein.gui.action.MitgliedImportAction;
-import de.jost_net.JVerein.gui.action.MitgliedSucheAction;
-import de.jost_net.JVerein.gui.action.MitgliedskontoListeAction;
-import de.jost_net.JVerein.gui.action.MitgliedskontoMahnungAction;
-import de.jost_net.JVerein.gui.action.MitgliedskontoRechnungAction;
-import de.jost_net.JVerein.gui.action.ProjektListAction;
-import de.jost_net.JVerein.gui.action.ProjektSaldoAction;
-import de.jost_net.JVerein.gui.action.QIFBuchungsImportViewAction;
-import de.jost_net.JVerein.gui.action.SpendenAction;
-import de.jost_net.JVerein.gui.action.SpendenbescheinigungListeAction;
-import de.jost_net.JVerein.gui.action.StatistikJahrgaengeAction;
-import de.jost_net.JVerein.gui.action.StatistikMitgliedAction;
-import de.jost_net.JVerein.gui.action.WiedervorlageListeAction;
-import de.jost_net.JVerein.gui.action.ZusatzbetraegeImportAction;
-import de.jost_net.JVerein.gui.action.ZusatzbetraegeListeAction;
+import de.jost_net.JVerein.gui.action.*;
 import de.jost_net.JVerein.keys.ArtBeitragsart;
 import de.jost_net.JVerein.rmi.Beitragsgruppe;
 import de.willuhn.datasource.rmi.DBIterator;
@@ -131,6 +70,8 @@ public class MyExtension implements Extension
 
       jverein.addChild(new MyItem(jverein, "Mitgliedskonten",
           new MitgliedskontoListeAction(), "exchange-alt.png"));
+      jverein.addChild(new MyItem(jverein, "EasyMitgliedsbeitrag",
+          new EasyMitgliedsbeitragListeAction(), "exchange-alt.png"));
       jverein.addChild(new MyItem(jverein, "Rechnungen",
           new MitgliedskontoRechnungAction(), "file-invoice.png"));
       jverein.addChild(new MyItem(jverein, "Mahnungen",
