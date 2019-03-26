@@ -30,12 +30,26 @@ public class EasyMitgliedsbeitragControl extends AbstractControl
     super(view);
   }
 
-  public int count(ArrayList<Beitragsmonat> beitragsmonate, boolean bezahltOnly)
+  public int countBeitraegeGezahlt(ArrayList<Beitragsmonat> beitragsmonate)
   {
     int count = 0;
     for (Beitragsmonat b: beitragsmonate)
     {
-      if (bezahltOnly && !b.isBezahlt())
+      if (!b.isBezahlt())
+      {
+        continue;
+      }
+      count += 1;
+    }
+    return count;
+  }
+
+  public int countBeitraegeSoll(ArrayList<Beitragsmonat> beitragsmonate)
+  {
+    int count = 0;
+    for (Beitragsmonat b: beitragsmonate)
+    {
+      if (b.isZukunft())
       {
         continue;
       }

@@ -85,7 +85,7 @@ public class EasyMitgliedsbeitragListeView extends AbstractView
           new DateFormatter(new JVDateFormatTTMMJJJJ()));
       mitgliederlist.addColumn( "Austritt","austritt",
           new DateFormatter(new JVDateFormatTTMMJJJJ()));
-      mitgliederlist.addColumn("Beitragsmonate gesamt", "id", new Formatter()
+      mitgliederlist.addColumn("Beitragsmonate soll", "id", new Formatter()
       {
         @Override
         public String format(Object o)
@@ -104,7 +104,7 @@ public class EasyMitgliedsbeitragListeView extends AbstractView
             ArrayList<Beitragsmonat> beitragsmonate = control
                 .getBeitragsmonateByMitglied(m, null);
 
-            return Integer.valueOf(control.count(beitragsmonate, false)).toString();
+            return Integer.valueOf(control.countBeitraegeSoll(beitragsmonate)).toString();
           }
           catch (RemoteException e)
           {
@@ -132,7 +132,7 @@ public class EasyMitgliedsbeitragListeView extends AbstractView
             ArrayList<Beitragsmonat> beitragsmonate = control
                 .getBeitragsmonateByMitglied(m, null);
 
-            return Integer.valueOf(control.count(beitragsmonate, false)-control.count(beitragsmonate, true)).toString();
+            return Integer.valueOf(control.countBeitraegeSoll(beitragsmonate)-control.countBeitraegeGezahlt(beitragsmonate)).toString();
           }
           catch (RemoteException e)
           {

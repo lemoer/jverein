@@ -2,6 +2,9 @@ package de.jost_net.JVerein.util;
 
 import de.jost_net.JVerein.gui.menu.EasyMitgliedsbeitragAuswahlDialog;
 
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+
 public class Beitragsmonat implements Comparable<Beitragsmonat> {
 
   private final int jahr;
@@ -86,6 +89,16 @@ public class Beitragsmonat implements Comparable<Beitragsmonat> {
 
 
     return getFastRepr() == ((Beitragsmonat) o).getFastRepr();
+  }
+
+  public boolean isZukunft()
+  {
+    GregorianCalendar now = new GregorianCalendar();
+
+    int jahr = now.get(Calendar.YEAR);
+    int monat = now.get(Calendar.MONTH);
+
+    return this.jahr > jahr || (jahr == this.jahr && this.monat > monat);
   }
 
 }
