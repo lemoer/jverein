@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Vector;
 
+import de.jost_net.JVerein.rmi.*;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGB;
@@ -57,13 +58,6 @@ import de.jost_net.JVerein.io.Adressbuch.Adressaufbereitung;
 import de.jost_net.JVerein.keys.BuchungsartSort;
 import de.jost_net.JVerein.keys.SplitbuchungTyp;
 import de.jost_net.JVerein.keys.Zahlungsweg;
-import de.jost_net.JVerein.rmi.Buchung;
-import de.jost_net.JVerein.rmi.Buchungsart;
-import de.jost_net.JVerein.rmi.Jahresabschluss;
-import de.jost_net.JVerein.rmi.Konto;
-import de.jost_net.JVerein.rmi.Mitglied;
-import de.jost_net.JVerein.rmi.Mitgliedskonto;
-import de.jost_net.JVerein.rmi.Projekt;
 import de.jost_net.JVerein.util.Dateiname;
 import de.jost_net.JVerein.util.JVDateFormatTTMMJJJJ;
 import de.willuhn.datasource.GenericObject;
@@ -1030,6 +1024,33 @@ public class BuchungsControl extends AbstractControl
       buchungsList.addColumn(new Column("mitgliedskonto", "Mitglied",
           new MitgliedskontoFormatter(), false, Column.ALIGN_AUTO,
           Column.SORT_BY_DISPLAY));
+      buchungsList.addColumn("EasyMitglied", "id", new Formatter()
+      {
+        @Override public String format(Object o)
+        {
+          Integer id = Integer.valueOf((String) o);
+          try
+          {
+            DBIterator<EasyBeitragsmonat> preIter = Einstellungen.getDBService().createList(EasyBeitragsmonat.class);
+
+            preIter.addFilter("buchung=?", id);
+
+            if (preIter.hasNext())
+            {
+              EasyBeitragsmonat next = preIter.next();
+              Mitglied m = next.getMitglied();
+              return m.getName() + ", " + m.getVorname();
+            }
+
+          }
+          catch (RemoteException e)
+          {
+            Logger.error("Fehler", e);
+          }
+
+          return null;
+        }
+      });
       buchungsList.addColumn("Projekt", "projekt", new ProjektFormatter());
       buchungsList.setMulti(true);
       buchungsList.setContextMenu(new BuchungMenu(this));
